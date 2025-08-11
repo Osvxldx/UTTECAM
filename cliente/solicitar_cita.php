@@ -1,0 +1,381 @@
+<?php
+require_once '../config/config.php';
+require_once '../includes/auth.php';
+require_once '../includes/functions.php';
+
+// Verificar que sea cliente
+if (!isCliente()) {
+    redirect('../login.php');
+}
+
+$functions = new Functions();
+$doctorInfo = $functions->getDoctorInfo();
+$error = '';
+$success = '';
+
+// Procesar solicitud de cita
+if ($_POST && isset($_POST['solicitar_cita'])) {
+    if (!verifyCSRFToken($_POST['csrf_token'])) {
+        $error = 'Token de seguridad inválido';
+    } else {
+        $patientName = cleanInput($_POST['patientName']);
+        $patientPhone = cleanInput($_POST['patientPhone']);
+        $patientWeight = (float)$_POST['patientWeight'];
+        $patientEmail = cleanInput($_POST['patientEmail']);
+        $date = $_POST['appointmentDate'];
+        $notes = cleanInput($_POST['notes']);
+        
+        // Validaciones
+        if (empty($patientName) || empty($patientEmail) || empty($date)) {
+            $error = 'Por favor complete todos los campos requeridos';
+        } elseif (!$functions->validateEmail($patientEmail)) {
+            $error = 'Formato de correo electrónico inválido';
+        } elseif (!$functions->validatePhone($patientPhone)) {
+            $error = 'Formato de teléfono inválido';
+        } elseif (!$functions->validateWeight($patientWeight)) {
+            $error = 'Peso debe estar entre 1 y 300 kg';
+        } elseif (!$functions->canSchedule($date)) {
+            $error = 'No se puede agendar en ese horario o día bloqueado';
+        } else {
+            // Crear la solicitud de cita
+            try {
+                $db = new Database();
+                $conn = $db->getConnection();
+                
+                // Buscar o crear paciente
+                $patientId = findOrCreatePatient($conn, [
+                    'patientName' => $patientName,
+                    'patientEmail' => $patientEmail,
+                    'patientPhone' => $patientPhone,
+                    'patientWeight' => $patientWeight
+                ]);
+                
+                // Insertar cita con estado pendiente
+                $stmt = $conn->prepare("
+                    INSERT INTO citas (paciente_id, fecha, notas, estado, creada_por) 
+                    VALUES (?, ?, ?, 'pendiente', 'cliente')
+                ");
+                $stmt->execute([$patientId, $date, $notes]);
+                
+                $citaId = $conn->lastInsertId();
+                
+                // Enviar email de confirmación al cliente
+                $emailContent = $functions->generateAppointmentEmail(
+                    $patientName, $date, $notes, 'pendiente'
+                );
+                
+                $functions->sendEmail(
+                    $patientEmail,
+                    'Confirmación de Solicitud de Cita',
+                    $emailContent
+                );
+                
+                // Enviar notificación al admin
+                $adminEmailContent = $functions->generateAdminNotificationEmail(
+                    $patientName, $patientEmail, $patientPhone, $date, $notes
+                );
+                
+                $functions->sendEmail(
+                    ADMIN_EMAIL,
+                    'Nueva Solicitud de Cita',
+                    $adminEmailContent
+                );
+                
+                $success = 'Solicitud de cita enviada exitosamente. Recibirás una confirmación por email.';
+                $_POST = array(); // Limpiar formulario
+                
+            } catch (Exception $e) {
+                $error = 'Error al enviar la solicitud: ' . $e->getMessage();
+            }
+        }
+    }
+}
+
+// Función auxiliar para buscar o crear paciente
+function findOrCreatePatient($conn, $patientData) {
+    // Buscar paciente por correo
+    $stmt = $conn->prepare("
+        SELECT p.id FROM pacientes p 
+        JOIN usuarios u ON p.usuario_id = u.id 
+        WHERE u.correo = ?
+    ");
+    $stmt->execute([$patientData['patientEmail']]);
+    $patient = $stmt->fetch();
+    
+    if ($patient) {
+        // Actualizar información del paciente existente
+        $stmt = $conn->prepare("
+            UPDATE pacientes 
+            SET telefono = ?, peso = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $patientData['patientPhone'],
+            $patientData['patientWeight'],
+            $patient['id']
+        ]);
+        
+        return $patient['id'];
+    }
+    
+    // Crear nuevo usuario y paciente
+    $conn->beginTransaction();
+    
+    try {
+        // Crear usuario
+        $stmt = $conn->prepare("
+            INSERT INTO usuarios (nombre, correo, contraseña, telefono, rol) 
+            VALUES (?, ?, ?, ?, 'cliente')
+        ");
+        $hashedPassword = password_hash('temp123', PASSWORD_DEFAULT);
+        $stmt->execute([
+            $patientData['patientName'],
+            $patientData['patientEmail'],
+            $hashedPassword,
+            $patientData['patientPhone']
+        ]);
+        
+        $userId = $conn->lastInsertId();
+        
+        // Crear paciente
+        $stmt = $conn->prepare("
+            INSERT INTO pacientes (usuario_id, telefono, peso, correo) 
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $userId,
+            $patientData['patientPhone'],
+            $patientData['patientWeight'],
+            $patientData['patientEmail']
+        ]);
+        
+        $patientId = $conn->lastInsertId();
+        
+        $conn->commit();
+        return $patientId;
+        
+    } catch (Exception $e) {
+        $conn->rollBack();
+        throw $e;
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitar Cita - Gestor de Citas Médicas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .fade-in { animation: fade 0.6s ease-in-out both; }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
+                        <i class="ph-stethoscope text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-900">Clínica Saludable</h1>
+                        <p class="text-sm text-gray-600"><?php echo $doctorInfo['name']; ?></p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Bienvenido, <?php echo $_SESSION['user_name']; ?></span>
+                    <a href="../logout.php" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                        <i class="ph-sign-out mr-2"></i>Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Formulario de solicitud -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl p-8 fade-in">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ph-calendar-plus text-indigo-600 text-2xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900">Solicitar Cita Médica</h2>
+                        <p class="text-gray-600 mt-2">Complete el formulario para solicitar su cita</p>
+                    </div>
+
+                    <?php if ($error): ?>
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                            <i class="ph-warning mr-2"></i> <?php echo $error; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($success): ?>
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+                            <i class="ph-check-circle mr-2"></i> <?php echo $success; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <form method="POST" class="space-y-6">
+                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="patientName" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nombre Completo <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="patientName" name="patientName" required
+                                       value="<?php echo isset($_POST['patientName']) ? htmlspecialchars($_POST['patientName']) : ''; ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       placeholder="Su nombre completo">
+                            </div>
+
+                            <div>
+                                <label for="patientPhone" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Teléfono <span class="text-red-500">*</span>
+                                </label>
+                                <input type="tel" id="patientPhone" name="patientPhone" required
+                                       value="<?php echo isset($_POST['patientPhone']) ? htmlspecialchars($_POST['patientPhone']) : ''; ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       placeholder="222-123-4567">
+                            </div>
+
+                            <div>
+                                <label for="patientWeight" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Peso (kg) <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="patientWeight" name="patientWeight" required min="1" max="300"
+                                       value="<?php echo isset($_POST['patientWeight']) ? htmlspecialchars($_POST['patientWeight']) : ''; ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       placeholder="70.5">
+                            </div>
+
+                            <div>
+                                <label for="patientEmail" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Correo Electrónico <span class="text-red-500">*</span>
+                                </label>
+                                <input type="email" id="patientEmail" name="patientEmail" required
+                                       value="<?php echo isset($_POST['patientEmail']) ? htmlspecialchars($_POST['patientEmail']) : ''; ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       placeholder="su@email.com">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="appointmentDate" class="block text-sm font-medium text-gray-700 mb-2">
+                                Fecha y Hora de la Cita <span class="text-red-500">*</span>
+                            </label>
+                            <input type="datetime-local" id="appointmentDate" name="appointmentDate" required
+                                   value="<?php echo isset($_POST['appointmentDate']) ? htmlspecialchars($_POST['appointmentDate']) : ''; ?>"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <p class="text-sm text-gray-500 mt-1">Horario de atención: Lunes a Viernes de 8:00 AM a 5:00 PM</p>
+                        </div>
+
+                        <div>
+                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                                Motivo / Notas
+                            </label>
+                            <textarea id="notes" name="notes" rows="4"
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                      placeholder="Describa el motivo de su consulta, síntomas, o cualquier información adicional que considere importante..."><?php echo isset($_POST['notes']) ? htmlspecialchars($_POST['notes']) : ''; ?></textarea>
+                        </div>
+
+                        <button type="submit" name="solicitar_cita" 
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-4 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                            <i class="ph-paper-plane-right"></i>
+                            Enviar Solicitud de Cita
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información lateral -->
+            <div class="space-y-6">
+                <!-- Información del médico -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="ph-user-md text-indigo-600 mr-2"></i>
+                        Información del Médico
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="font-medium text-gray-900"><?php echo $doctorInfo['name']; ?></p>
+                            <p class="text-sm text-gray-600"><?php echo $doctorInfo['specialty']; ?></p>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="ph-map-pin text-gray-400 mr-2 mt-1"></i>
+                            <p class="text-sm text-gray-600"><?php echo $doctorInfo['address']; ?></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instrucciones -->
+                <div class="bg-blue-50 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                        <i class="ph-info text-blue-600 mr-2"></i>
+                        Instrucciones
+                    </h3>
+                    <ul class="text-sm text-blue-800 space-y-2">
+                        <li class="flex items-start">
+                            <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
+                            Complete todos los campos marcados con *
+                        </li>
+                        <li class="flex items-start">
+                            <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
+                            Seleccione una fecha y hora disponible
+                        </li>
+                        <li class="flex items-start">
+                            <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
+                            Recibirá confirmación por email
+                        </li>
+                        <li class="flex items-start">
+                            <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
+                            El médico revisará su solicitud
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Enlaces útiles -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Enlaces Útiles</h3>
+                    <div class="space-y-3">
+                        <a href="mis_citas.php" class="flex items-center text-indigo-600 hover:text-indigo-700 transition duration-200">
+                            <i class="ph-calendar mr-2"></i>
+                            Ver mis citas
+                        </a>
+                        <a href="../logout.php" class="flex items-center text-gray-600 hover:text-gray-700 transition duration-200">
+                            <i class="ph-sign-out mr-2"></i>
+                            Cerrar sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <p class="text-sm text-gray-500">
+                    © 2025 Clínica Saludable. Todos los derechos reservados.
+                </p>
+                <p class="text-xs text-gray-400 mt-2">
+                    <?php echo $doctorInfo['address']; ?>
+                </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
