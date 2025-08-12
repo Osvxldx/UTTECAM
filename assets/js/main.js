@@ -49,22 +49,32 @@ function initDashboard() {
     // ---------------------- Funciones de comunicación con API ----------------------
     async function loadAppointments() {
         try {
+            console.log('🔄 Cargando citas...');
             const response = await fetch('../api/citas_api.php?action=getAll');
+            
+            console.log('📡 Respuesta recibida:', response.status, response.statusText);
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ Error en respuesta:', errorText);
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
+            
             const data = await response.json();
+            console.log('📊 Datos recibidos:', data);
+            
             if (data.success) {
                 appointments = data.appointments;
+                console.log('✅ Citas cargadas:', appointments.length);
                 renderAppointments();
                 renderCalendar();
             } else {
-                console.error('Error en respuesta API:', data.message);
+                console.error('❌ Error en respuesta API:', data.message);
                 showNotification('Error cargando citas: ' + data.message, 'error');
             }
         } catch (error) {
-            console.error('Error cargando citas:', error);
-            showNotification('Error de conexión al cargar citas', 'error');
+            console.error('❌ Error cargando citas:', error);
+            showNotification('Error de conexión al cargar citas: ' + error.message, 'error');
         }
     }
 
@@ -130,16 +140,22 @@ function initDashboard() {
                     appointment: updated
                 })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             if (data.success) {
                 await loadAppointments();
-                showNotification('Cita actualizada exitosamente');
+                showNotification('Cita actualizada exitosamente', 'success');
             } else {
                 showNotification('Error: ' + data.message, 'error');
             }
         } catch (error) {
             console.error('Error actualizando cita:', error);
-            showNotification('Error de conexión', 'error');
+            showNotification('Error de conexión: ' + error.message, 'error');
         }
     }
 
@@ -155,16 +171,22 @@ function initDashboard() {
                     id: id
                 })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             if (data.success) {
                 await loadAppointments();
-                showNotification('Cita eliminada exitosamente');
+                showNotification('Cita eliminada exitosamente', 'success');
             } else {
                 showNotification('Error: ' + data.message, 'error');
             }
         } catch (error) {
             console.error('Error eliminando cita:', error);
-            showNotification('Error de conexión', 'error');
+            showNotification('Error de conexión: ' + error.message, 'error');
         }
     }
 
@@ -262,35 +284,37 @@ function initDashboard() {
 
     // ---------------------- Render listado de citas en tabla ----------------------
     function renderAppointments(list = appointments) {
+        console.log('🎨 Renderizando citas:', list.length);
+        console.log('📋 Datos de citas:', list);
+        
         appointmentsList.innerHTML = "";
         if (list.length === 0) {
             appointmentsList.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500">No hay citas</td></tr>`;
             return;
         }
-        list.forEach(appt => {
+        list.forEach((appt, index) => {
+            console.log(`📝 Procesando cita ${index + 1}:`, appt);
+            
             const tr = document.createElement("tr");
             tr.classList.add("border-b");
             
-            // Determinar color del estado
-            let statusClass = '';
+            // Determinar texto del estado (SOLO palabras, sin colores)
             let statusText = '';
             switch(appt.estado) {
                 case 'pendiente':
-                    statusClass = 'bg-yellow-100 text-yellow-800';
-                    statusText = 'Pendiente';
+                    statusText = '⏳ Pendiente de Aprobación';
                     break;
                 case 'aprobada':
-                    statusClass = 'bg-green-100 text-green-800';
-                    statusText = 'Aprobada';
+                    statusText = '✅ Aprobada';
                     break;
                 case 'rechazada':
-                    statusClass = 'bg-red-100 text-red-800';
-                    statusText = 'Rechazada';
+                    statusText = '❌ Rechazada';
                     break;
                 default:
-                    statusClass = 'bg-gray-100 text-gray-800';
-                    statusText = appt.estado || 'Pendiente';
+                    statusText = '❓ ' + (appt.estado || 'Pendiente');
             }
+            
+            console.log(`🏷️ Estado de cita ${index + 1}: ${statusText} (${appt.estado})`);
 
             tr.innerHTML = `
                 <td class="border px-2 py-1">${appt.patientName || appt.nombre_paciente}</td>
@@ -299,19 +323,21 @@ function initDashboard() {
                 <td class="border px-2 py-1 text-center">${appt.patientWeight || appt.peso_paciente || ''}</td>
                 <td class="border px-2 py-1">${appt.notas || ""}</td>
                 <td class="border px-2 py-1 text-center">
-                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">${statusText}</span>
                 </td>
                 <td class="border px-2 py-1 text-center space-x-1">
-                    <button class="edit-btn px-2 py-1 bg-indigo-600 text-white rounded text-sm" data-id="${appt.id}" title="Editar"><i class="ph-pencil"></i></button>
-                    <button class="del-btn px-2 py-1 bg-red-600 text-white rounded text-sm" data-id="${appt.id}" title="Eliminar"><i class="ph-trash"></i></button>
+                    <button class="edit-btn px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm transition-colors" data-id="${appt.id}" title="Editar"><i class="ph-pencil"></i></button>
+                    <button class="del-btn px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors" data-id="${appt.id}" title="Eliminar"><i class="ph-trash"></i></button>
                     ${appt.estado === 'pendiente' ? `
-                        <button class="approve-btn px-2 py-1 bg-green-600 text-white rounded text-sm" data-id="${appt.id}" title="Aprobar"><i class="ph-check"></i></button>
-                        <button class="reject-btn px-2 py-1 bg-red-600 text-white rounded text-sm" data-id="${appt.id}" title="Rechazar"><i class="ph-x"></i></button>
+                        <button class="approve-btn px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-colors" data-id="${appt.id}" title="Aprobar"><i class="ph-check"></i></button>
+                        <button class="reject-btn px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors" data-id="${appt.id}" title="Rechazar"><i class="ph-x"></i></button>
                     ` : ''}
                 </td>
             `;
             appointmentsList.appendChild(tr);
         });
+        
+        console.log('✅ Renderizado completado');
 
         // Botones editar
         document.querySelectorAll(".edit-btn").forEach(btn => {
@@ -327,7 +353,7 @@ function initDashboard() {
         document.querySelectorAll(".del-btn").forEach(btn => {
             btn.onclick = e => {
                 const id = btn.dataset.id;
-                if (confirm("¿Eliminar esta cita?")) {
+                if (confirm("¿Está seguro de que desea eliminar esta cita? Esta acción no se puede deshacer.")) {
                     deleteAppointment(id);
                 }
             };
@@ -337,7 +363,7 @@ function initDashboard() {
         document.querySelectorAll(".approve-btn").forEach(btn => {
             btn.onclick = e => {
                 const id = btn.dataset.id;
-                if (confirm("¿Aprobar esta cita?")) {
+                if (confirm("¿Está seguro de que desea aprobar esta cita? Se enviará una notificación al paciente.")) {
                     updateAppointment(id, { estado: 'aprobada' });
                 }
             };
@@ -347,7 +373,7 @@ function initDashboard() {
         document.querySelectorAll(".reject-btn").forEach(btn => {
             btn.onclick = e => {
                 const id = btn.dataset.id;
-                if (confirm("¿Rechazar esta cita?")) {
+                if (confirm("¿Está seguro de que desea rechazar esta cita? Se enviará una notificación al paciente.")) {
                     updateAppointment(id, { estado: 'rechazada' });
                 }
             };

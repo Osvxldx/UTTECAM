@@ -230,14 +230,15 @@ function findOrCreatePatient($conn, $patientData) {
                     <form method="POST" class="space-y-6">
                         <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
+                        <!-- Grid responsivo mejorado para móviles -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="sm:col-span-2">
                                 <label for="patientName" class="block text-sm font-medium text-gray-700 mb-2">
                                     Nombre Completo <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" id="patientName" name="patientName" required
                                        value="<?php echo isset($_POST['patientName']) ? htmlspecialchars($_POST['patientName']) : ''; ?>"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
                                        placeholder="Su nombre completo">
                             </div>
 
@@ -247,55 +248,87 @@ function findOrCreatePatient($conn, $patientData) {
                                 </label>
                                 <input type="tel" id="patientPhone" name="patientPhone" required
                                        value="<?php echo isset($_POST['patientPhone']) ? htmlspecialchars($_POST['patientPhone']) : ''; ?>"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
                                        placeholder="222-123-4567">
+                                <p class="text-xs text-gray-500 mt-1">Formato: XXX-XXX-XXXX</p>
                             </div>
 
                             <div>
                                 <label for="patientWeight" class="block text-sm font-medium text-gray-700 mb-2">
                                     Peso (kg) <span class="text-red-500">*</span>
                                 </label>
-                                <input type="number" id="patientWeight" name="patientWeight" required min="1" max="300"
+                                <input type="number" id="patientWeight" name="patientWeight" required min="1" max="300" step="0.1"
                                        value="<?php echo isset($_POST['patientWeight']) ? htmlspecialchars($_POST['patientWeight']) : ''; ?>"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
                                        placeholder="70.5">
+                                <p class="text-xs text-gray-500 mt-1">Entre 1 y 300 kg</p>
                             </div>
 
-                            <div>
+                            <div class="sm:col-span-2">
                                 <label for="patientEmail" class="block text-sm font-medium text-gray-700 mb-2">
                                     Correo Electrónico <span class="text-red-500">*</span>
                                 </label>
                                 <input type="email" id="patientEmail" name="patientEmail" required
                                        value="<?php echo isset($_POST['patientEmail']) ? htmlspecialchars($_POST['patientEmail']) : ''; ?>"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
                                        placeholder="su@email.com">
+                                <p class="text-xs text-gray-500 mt-1">Recibirá confirmaciones por este correo</p>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label for="appointmentDate" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Fecha y Hora de la Cita <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local" id="appointmentDate" name="appointmentDate" required
+                                       value="<?php echo isset($_POST['appointmentDate']) ? htmlspecialchars($_POST['appointmentDate']) : ''; ?>"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base">
+                                <div class="text-sm text-gray-600 mt-2 p-3 bg-blue-50 rounded-lg">
+                                    <p class="font-medium">📅 Horario de Atención:</p>
+                                    <ul class="mt-1 space-y-1">
+                                        <li>• Lunes a Viernes: 8:00 AM - 5:00 PM</li>
+                                        <li>• Sábados: 8:00 AM - 12:00 PM</li>
+                                        <li>• Domingos: Cerrado</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Motivo / Notas
+                                </label>
+                                <textarea id="notes" name="notes" rows="4"
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base resize-none"
+                                          placeholder="Describa el motivo de su consulta, síntomas, o cualquier información adicional que considere importante..."><?php echo isset($_POST['notes']) ? htmlspecialchars($_POST['notes']) : ''; ?></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Opcional pero recomendado para mejor atención</p>
                             </div>
                         </div>
 
-                        <div>
-                            <label for="appointmentDate" class="block text-sm font-medium text-gray-700 mb-2">
-                                Fecha y Hora de la Cita <span class="text-red-500">*</span>
-                            </label>
-                            <input type="datetime-local" id="appointmentDate" name="appointmentDate" required
-                                   value="<?php echo isset($_POST['appointmentDate']) ? htmlspecialchars($_POST['appointmentDate']) : ''; ?>"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <p class="text-sm text-gray-500 mt-1">Horario de atención: Lunes a Viernes de 8:00 AM a 5:00 PM</p>
+                        <!-- Botones responsivos mejorados -->
+                        <div class="flex flex-col sm:flex-row gap-3 pt-6">
+                            <button type="submit" name="solicitar_cita" 
+                                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-lg text-base font-medium transition duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                                <i class="ph-paper-plane-right text-lg"></i>
+                                <span class="hidden sm:inline">Enviar Solicitud de Cita</span>
+                                <span class="sm:hidden">Solicitar Cita</span>
+                            </button>
+                            <a href="mis_citas.php" 
+                               class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-4 rounded-lg text-base font-medium transition duration-200 text-center flex items-center justify-center gap-2">
+                                <i class="ph-list text-lg"></i>
+                                <span class="hidden sm:inline">Ver Mis Citas</span>
+                                <span class="sm:hidden">Mis Citas</span>
+                            </a>
                         </div>
 
-                        <div>
-                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
-                                Motivo / Notas
-                            </label>
-                            <textarea id="notes" name="notes" rows="4"
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                      placeholder="Describa el motivo de su consulta, síntomas, o cualquier información adicional que considere importante..."><?php echo isset($_POST['notes']) ? htmlspecialchars($_POST['notes']) : ''; ?></textarea>
+                        <!-- Información adicional -->
+                        <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <h4 class="font-medium text-green-800 mb-2">ℹ️ Información Importante</h4>
+                            <ul class="text-sm text-green-700 space-y-1">
+                                <li>• Recibirá una confirmación por email inmediatamente</li>
+                                <li>• El médico revisará su solicitud en las próximas 24 horas</li>
+                                <li>• Se le notificará cuando la cita sea aprobada o rechazada</li>
+                                <li>• Puede cancelar o modificar su cita desde "Mis Citas"</li>
+                            </ul>
                         </div>
-
-                        <button type="submit" name="solicitar_cita" 
-                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-4 px-6 rounded-lg transition duration-200 flex items-center justify-center gap-2">
-                            <i class="ph-paper-plane-right"></i>
-                            Enviar Solicitud de Cita
-                        </button>
                     </form>
                 </div>
             </div>
