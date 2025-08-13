@@ -31,6 +31,7 @@ define('SMTP_FROM_NAME', 'Clínica Saludable');
 define('DOCTOR_NAME', 'Dr. Merdardo García Campos');
 define('DOCTOR_SPECIALTY', 'Médico cirujano y partero');
 define('DOCTOR_ADDRESS', '7 oriente 406, Tecamachalco, Puebla');
+define('DOCTOR_PHONE', '+52 221 246 2420');
 
 // Horarios por defecto
 define('DEFAULT_OPEN_TIME', '08:00');

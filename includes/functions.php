@@ -385,7 +385,9 @@ class Functions {
         return [
             'name' => DOCTOR_NAME,
             'specialty' => DOCTOR_SPECIALTY,
+            'phone' => DOCTOR_PHONE,
             'address' => DOCTOR_ADDRESS
+            
         ];
     }
 

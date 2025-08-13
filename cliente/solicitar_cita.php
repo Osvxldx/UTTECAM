@@ -188,7 +188,7 @@ function findOrCreatePatient($conn, $patientData) {
                         <i class="ph-stethoscope text-white text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl font-semibold text-gray-900">Clínica Saludable</h1>
+                        <h1 class="text-xl font-semibold text-gray-900">Farmamedis</h1>
                         <p class="text-sm text-gray-600"><?php echo $doctorInfo['name']; ?></p>
                     </div>
                 </div>
@@ -350,6 +350,11 @@ function findOrCreatePatient($conn, $patientData) {
                             <i class="ph-map-pin text-gray-400 mr-2 mt-1"></i>
                             <p class="text-sm text-gray-600"><?php echo $doctorInfo['address']; ?></p>
                         </div>
+                        <div class="flex items-start">
+                            <i class="ph-phone text-gray-400 mr-2 mt-1"></i>
+                            <p class="text-sm text-gray-600"><?php echo $doctorInfo['phone']; ?></p>
+                        </div>
+                        
                     </div>
                 </div>
 
@@ -362,20 +367,17 @@ function findOrCreatePatient($conn, $patientData) {
                     <ul class="text-sm text-blue-800 space-y-2">
                         <li class="flex items-start">
                             <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
-                            Complete todos los campos marcados con *
+                            -Complete todos los campos marcados con *
                         </li>
                         <li class="flex items-start">
                             <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
-                            Seleccione una fecha y hora disponible
+                            -Seleccione una fecha y hora disponible
                         </li>
                         <li class="flex items-start">
                             <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
-                            Recibirá confirmación por email
+                            -Recibirá confirmación por email
                         </li>
-                        <li class="flex items-start">
-                            <i class="ph-check-circle text-blue-600 mr-2 mt-0.5"></i>
-                            El médico revisará su solicitud
-                        </li>
+                        
                     </ul>
                 </div>
 
