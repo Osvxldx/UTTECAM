@@ -196,9 +196,9 @@ function findOrCreatePatient($conn, $patientData) {
                                     Nombre Completo <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" id="patientName" name="patientName" required
-                                       value="<?php echo isset($_POST['patientName']) ? htmlspecialchars($_POST['patientName']) : ''; ?>"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
-                                       placeholder="Su nombre completo">
+                            value="<?php echo isset($_POST['patientName']) ? htmlspecialchars($_POST['patientName']) : ''; ?>"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-base"
+                            placeholder="Su nombre completo">
                             </div>
 
                             <div>
