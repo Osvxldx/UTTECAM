@@ -93,71 +93,31 @@ if ($_POST && isset($_POST['solicitar_cita'])) {
 
 // Función auxiliar para buscar o crear paciente
 function findOrCreatePatient($conn, $patientData) {
-    // Buscar paciente por correo
-    $stmt = $conn->prepare("
-        SELECT p.id FROM pacientes p 
-        JOIN usuarios u ON p.usuario_id = u.id 
-        WHERE u.correo = ?
-    ");
-    $stmt->execute([$patientData['patientEmail']]);
+    // Asociar siempre al usuario logueado
+    $userId = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT id FROM pacientes WHERE usuario_id = ?");
+    $stmt->execute([$userId]);
     $patient = $stmt->fetch();
-    
     if ($patient) {
         // Actualizar información del paciente existente
-        $stmt = $conn->prepare("
-            UPDATE pacientes 
-            SET telefono = ?, peso = ? 
-            WHERE id = ?
-        ");
+        $stmt = $conn->prepare("UPDATE pacientes SET telefono = ?, peso = ?, correo = ? WHERE id = ?");
         $stmt->execute([
             $patientData['patientPhone'],
             $patientData['patientWeight'],
+            $patientData['patientEmail'],
             $patient['id']
         ]);
-        
         return $patient['id'];
     }
-    
-    // Crear nuevo usuario y paciente
-    $conn->beginTransaction();
-    
-    try {
-        // Crear usuario
-        $stmt = $conn->prepare("
-            INSERT INTO usuarios (nombre, correo, contraseña, telefono, rol) 
-            VALUES (?, ?, ?, ?, 'cliente')
-        ");
-        $hashedPassword = password_hash('temp123', PASSWORD_DEFAULT);
-        $stmt->execute([
-            $patientData['patientName'],
-            $patientData['patientEmail'],
-            $hashedPassword,
-            $patientData['patientPhone']
-        ]);
-        
-        $userId = $conn->lastInsertId();
-        
-        // Crear paciente
-        $stmt = $conn->prepare("
-            INSERT INTO pacientes (usuario_id, telefono, peso, correo) 
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $userId,
-            $patientData['patientPhone'],
-            $patientData['patientWeight'],
-            $patientData['patientEmail']
-        ]);
-        
-        $patientId = $conn->lastInsertId();
-        
-        $conn->commit();
-        return $patientId;
-        
-    } catch (Exception $e) {
-        $conn->rollBack();
-        throw $e;
-    }
+    // Si no existe paciente, créalo para el usuario logueado
+    $stmt = $conn->prepare("INSERT INTO pacientes (usuario_id, telefono, peso, correo) VALUES (?, ?, ?, ?)");
+    $stmt->execute([
+        $userId,
+        $patientData['patientPhone'],
+        $patientData['patientWeight'],
+        $patientData['patientEmail']
+    ]);
+    return $conn->lastInsertId();
 }
 ?>
 <!DOCTYPE html>
