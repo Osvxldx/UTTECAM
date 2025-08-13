@@ -63,9 +63,11 @@ if ($_POST && isset($_POST['login'])) {
     <div class="max-w-md w-full fade-in">
         <!-- Logo y título -->
         <div class="text-center mb-8">
-            <div class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ph-stethoscope text-white text-3xl"></i>
+            <div class="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 bg-white">
+                <img src="imagen/Logo.jpg" alt="Logo" class="w-full h-full object-contain">
             </div>
+
+
             <h1 class="text-2xl font-bold text-gray-800">Clínica Saludable</h1>
             <p class="text-gray-600 mt-2"><?php echo DOCTOR_NAME; ?></p>
             <p class="text-sm text-gray-500"><?php echo DOCTOR_SPECIALTY; ?></p>
@@ -132,13 +134,9 @@ if ($_POST && isset($_POST['login'])) {
             </div>
 
             <!-- Información de acceso -->
-            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">Acceso de Prueba:</h3>
-                <div class="text-xs text-gray-600 space-y-1">
-                    <p><strong>Admin:</strong> admin@clinica.com / admin123</p>
-                    <p><strong>Cliente Juan:</strong> juan@email.com / juan123</p>
-                    <p><strong>Cliente María:</strong> maria@email.com / maria123</p>
-                </div>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg text-center">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Tu salud es lo mas importante.</h3>
+                
             </div>
         </div>
 

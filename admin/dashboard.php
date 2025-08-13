@@ -89,10 +89,11 @@ $doctorInfo = $functions->getDoctorInfo();
             <div id="userInfo" class="flex items-center gap-3">
                 <div class="text-right text-sm">
                     <p class="font-medium" id="userName"><?php echo $_SESSION['user_name']; ?></p>
-                    <p id="userRole">Administrador</p>
+                    <p id="userRole">Merdardo G. Campos</p>
                 </div>
-                <img src="https://i.pravatar.cc/40?u=admin" alt="Foto de usuario" class="w-10 h-10 rounded-full" />
-            </div>
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <img src="../imagen/Logo.jpg" alt="Logo" class="w-full h-full object-contain">
+                </div>
         </header>
 
         <!-- Secciones -->

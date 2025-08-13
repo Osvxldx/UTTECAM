@@ -1,11 +1,45 @@
-<?php
-/**
- * Funciones generales del sistema
- * Gestor de Citas Médicas
- */
 
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
+
+if (!defined('SMTP_FROM_EMAIL')) {
+    define('SMTP_FROM_EMAIL', 'TU_CORREO@gmail.com'); // Cambia esto
+}
+if (!defined('SMTP_FROM_NAME')) {
+    define('SMTP_FROM_NAME', 'Nombre del Remitente'); // Cambia esto
+}
+
+function sendSMTPMail($to, $subject, $body, $fromEmail = SMTP_FROM_EMAIL, $fromName = SMTP_FROM_NAME) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'TU_CORREO@gmail.com'; // Cambia esto
+        $mail->Password = 'TU_CONTRASEÑA_O_APP_PASSWORD'; // Cambia esto
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($to);
+
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        $mail->send();
+        error_log("Email enviado exitosamente a: $to");
+        return true;
+    } catch (Exception $e) {
+        error_log("Error enviando correo: {$mail->ErrorInfo}");
+        return false;
+    }
+}
 
 class Functions {
     private $db;
@@ -145,30 +179,7 @@ class Functions {
         if ($from === null) {
             $from = SMTP_FROM_EMAIL;
         }
-
-        $headers = "From: " . SMTP_FROM_NAME . " <" . $from . ">\r\n";
-        $headers .= "Reply-To: " . $from . "\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
-
-        // Log del email para debugging
-        error_log("Enviando email a: $to, Asunto: $subject, Desde: $from");
-        
-        $result = mail($to, $subject, $message, $headers);
-        
-        if (!$result) {
-            error_log("Error enviando email a: $to - Asunto: $subject");
-            // Intentar obtener información del error
-            $error = error_get_last();
-            if ($error) {
-                error_log("Detalle del error: " . print_r($error, true));
-            }
-        } else {
-            error_log("Email enviado exitosamente a: $to");
-        }
-        
-        return $result;
+        return sendSMTPMail($to, $subject, $message, $from, SMTP_FROM_NAME);
     }
 
     /**
@@ -176,80 +187,65 @@ class Functions {
      */
     public function generateAppointmentEmail($patientName, $appointmentDate, $notes, $status = 'pendiente') {
         $date = $this->formatDateTime($appointmentDate);
-        
         $statusText = '';
-        $statusColor = '';
         $statusMessage = '';
-        
         switch($status) {
             case 'pendiente':
-                $statusText = 'PENDIENTE DE APROBACIÓN';
-                $statusColor = '#f59e0b';
+                $statusText = '⏳ Pendiente de Aprobación';
                 $statusMessage = 'Su cita está pendiente de aprobación. Recibirá una notificación cuando sea revisada por el médico.';
                 break;
             case 'aprobada':
-                $statusText = 'APROBADA';
-                $statusColor = '#10b981';
+                $statusText = '✅ Aprobada';
                 $statusMessage = 'Su cita ha sido aprobada. Por favor, llegue 10 minutos antes de la hora programada.';
                 break;
             case 'rechazada':
-                $statusText = 'RECHAZADA';
-                $statusColor = '#ef4444';
+                $statusText = '❌ Rechazada';
                 $statusMessage = 'Su cita ha sido rechazada. Por favor, contacte al consultorio para más información o solicite una nueva fecha.';
                 break;
         }
-        
         $html = "
         <html>
         <head>
-            <title>Estado de Cita Médica</title>
+            <title>Confirmación de Cita</title>
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
                 .container { max-width: 600px; margin: 0 auto; background: #f9fafb; }
-                .header { background: #4f46e5; color: white; padding: 30px; text-align: center; }
+                .header { background: #2563eb; color: white; padding: 30px; text-align: center; }
                 .header h1 { margin: 0; font-size: 24px; }
                 .header p { margin: 10px 0 0 0; opacity: 0.9; }
                 .content { background: white; padding: 30px; margin: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                .status-badge { background: {$statusColor}; color: white; padding: 12px 24px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; margin: 20px 0; }
-                .details { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4f46e5; }
+                .status-badge { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+                .details { background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb; }
+                .details h3 { margin-top: 0; color: #2563eb; }
                 .details p { margin: 8px 0; }
+                .important { background: #fef3c7; border: 1px solid #fde68a; padding: 20px; border-radius: 8px; margin: 20px 0; }
                 .footer { text-align: center; margin: 20px; color: #6b7280; font-size: 14px; }
-                .contact-info { background: #e0e7ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
-                .important { background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 20px 0; }
             </style>
         </head>
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>🏥 Clínica Saludable</h1>
-                    <p>Estado de su Cita Médica</p>
+                    <h1>📅 Confirmación de Cita</h1>
+                    <p>{$statusText}</p>
                 </div>
                 <div class='content'>
-                    <p>Estimado/a <strong>{$patientName}</strong>,</p>
-                    
-                    <div style='text-align: center;'>
-                        <div class='status-badge'>{$statusText}</div>
-                    </div>
-                    
+                    <div class='status-badge'>{$statusText}</div>
                     <p>{$statusMessage}</p>
-                    
                     <div class='details'>
-                        <h3 style='margin-top: 0; color: #4f46e5;'>📋 Detalles de la Cita</h3>
-                        <p><strong>📅 Fecha y Hora:</strong> {$date}</p>
-                        <p><strong>👨‍⚕️ Médico:</strong> " . DOCTOR_NAME . "</p>
-                        <p><strong>🏥 Especialidad:</strong> " . DOCTOR_SPECIALTY . "</p>
-                        <p><strong>🏠 Dirección:</strong> " . DOCTOR_ADDRESS . "</p>";
-        
+                        <h3>📋 Detalles de la Cita</h3>
+                        <p><strong>Paciente:</strong> {$patientName}</p>
+                        <p><strong>Fecha y Hora:</strong> {$date}</p>
+                        <p><strong>Médico:</strong> " . DOCTOR_NAME . "</p>
+                        <p><strong>Especialidad:</strong> " . DOCTOR_SPECIALTY . "</p>
+                        <p><strong>Dirección:</strong> " . DOCTOR_ADDRESS . "</p>";
         if ($notes) {
-            $html .= "<p><strong>📝 Notas:</strong> {$notes}</p>";
+            $html .= "<p><strong>Notas:</strong> {$notes}</p>";
         }
-        
         $html .= "</div>";
-        
         if ($status === 'aprobada') {
             $html .= "
             <div class='important'>
-                <h4 style='margin-top: 0; color: #92400e;'>⚠️ Información Importante</h4>
+                <h4>⚠️ Información Importante</h4>
                 <ul style='margin: 10px 0; padding-left: 20px;'>
                     <li>Llegue 10 minutos antes de la hora programada</li>
                     <li>Traiga identificación oficial</li>
@@ -257,14 +253,12 @@ class Functions {
                 </ul>
             </div>";
         }
-        
         $html .= "
                     <div class='contact-info'>
-                        <h4 style='margin-top: 0; color: #3730a3;'>📞 Información de Contacto</h4>
-                        <p><strong>Teléfono:</strong> " . DOCTOR_ADDRESS . "</p>
+                        <h4>📞 Información de Contacto</h4>
+                        <p><strong>Teléfono:</strong> " . (defined('DOCTOR_PHONE') ? DOCTOR_PHONE : 'No disponible') . "</p>
                         <p><strong>Horario de Atención:</strong> Lunes a Viernes de 8:00 AM a 5:00 PM</p>
                     </div>
-                    
                     <p>Si tiene alguna pregunta, no dude en contactarnos.</p>
                     <p>Atentamente,<br><strong>Equipo de " . DOCTOR_NAME . "</strong></p>
                 </div>
@@ -275,7 +269,6 @@ class Functions {
             </div>
         </body>
         </html>";
-        
         return $html;
     }
 
