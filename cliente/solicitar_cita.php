@@ -184,9 +184,10 @@ function findOrCreatePatient($conn, $patientData) {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
-                        <i class="ph-stethoscope text-white text-xl"></i>
-                    </div>
+                    <div class="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 bg-white">
+                <img src="../imagen/Logo.jpg" alt="Logo" class="w-full h-full object-contain">
+            </div>
+
                     <div>
                         <h1 class="text-xl font-semibold text-gray-900">Farmamedis</h1>
                         <p class="text-sm text-gray-600"><?php echo $doctorInfo['name']; ?></p>
@@ -208,9 +209,7 @@ function findOrCreatePatient($conn, $patientData) {
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-2xl shadow-xl p-8 fade-in">
                     <div class="text-center mb-8">
-                        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="ph-calendar-plus text-indigo-600 text-2xl"></i>
-                        </div>
+                        
                         <h2 class="text-2xl font-bold text-gray-900">Solicitar Cita Médica</h2>
                         <p class="text-gray-600 mt-2">Complete el formulario para solicitar su cita</p>
                     </div>
