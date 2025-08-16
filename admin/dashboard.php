@@ -83,7 +83,7 @@ $doctorInfo = $functions->getDoctorInfo();
         <header class="flex items-center justify-between bg-white shadow px-6 py-4 sticky top-0 z-10">
             <button id="openSidebar" class="lg:hidden text-2xl"><i class="ph-list"></i></button>
             <div>
-                <h1 class="text-lg font-semibold">Clínica Saludable</h1>
+                <h1 class="text-lg font-semibold">Farmamedis</h1>
                 <p class="text-sm text-gray-600"><?php echo $doctorInfo['address']; ?></p>
             </div>
             <div id="userInfo" class="flex items-center gap-3">

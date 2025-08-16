@@ -7,23 +7,19 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 
-if (!defined('SMTP_FROM_EMAIL')) {
-    define('SMTP_FROM_EMAIL', 'TU_CORREO@gmail.com'); // Cambia esto
-}
-if (!defined('SMTP_FROM_NAME')) {
-    define('SMTP_FROM_NAME', 'Nombre del Remitente'); // Cambia esto
-}
+
 
 function sendSMTPMail($to, $subject, $body, $fromEmail = SMTP_FROM_EMAIL, $fromName = SMTP_FROM_NAME) {
     $mail = new PHPMailer(true);
+    $logMsg = "Intentando enviar email a: $to | Asunto: $subject";
     try {
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        $mail->Host = SMTP_HOST;
         $mail->SMTPAuth = true;
-        $mail->Username = 'TU_CORREO@gmail.com'; // Cambia esto
-        $mail->Password = 'TU_CONTRASEÑA_O_APP_PASSWORD'; // Cambia esto
+        $mail->Username = SMTP_USERNAME;
+        $mail->Password = SMTP_PASSWORD;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Port = SMTP_PORT;
 
         $mail->setFrom($fromEmail, $fromName);
         $mail->addAddress($to);
@@ -33,10 +29,12 @@ function sendSMTPMail($to, $subject, $body, $fromEmail = SMTP_FROM_EMAIL, $fromN
         $mail->Body    = $body;
 
         $mail->send();
-        error_log("Email enviado exitosamente a: $to");
+        $logMsg .= " | Estado: ENVIADO";
+        error_log($logMsg);
         return true;
     } catch (Exception $e) {
-        error_log("Error enviando correo: {$mail->ErrorInfo}");
+        $logMsg .= " | Estado: ERROR | PHPMailer: {$mail->ErrorInfo} | Exception: {$e->getMessage()}";
+        error_log($logMsg);
         return false;
     }
 }

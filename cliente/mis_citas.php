@@ -60,11 +60,9 @@ try {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
-                        <i class="ph-stethoscope text-white text-xl"></i>
-                    </div>
+                    <img src="../imagen/Logo.jpg" alt="Logo" class="w-12 h-12 object-contain mr-4">
                     <div>
-                        <h1 class="text-xl font-semibold text-gray-900">Clínica Saludable</h1>
+                        <h1 class="text-xl font-semibold text-gray-900">Farmamedis</h1>
                         <p class="text-sm text-gray-600"><?php echo $doctorInfo['name']; ?></p>
                     </div>
                 </div>

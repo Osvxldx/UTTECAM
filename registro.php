@@ -71,10 +71,8 @@ if ($_POST && isset($_POST['register'])) {
     <div class="max-w-md w-full fade-in">
         <!-- Logo y título -->
         <div class="text-center mb-8">
-            <div class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="ph-user-plus text-white text-3xl"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800">Clínica Saludable</h1>
+            <img src="imagen/Logo.jpg" alt="Logo" class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Farmamedis</h1>
             <p class="text-gray-600 mt-2"><?php echo DOCTOR_NAME; ?></p>
             <p class="text-sm text-gray-500"><?php echo DOCTOR_SPECIALTY; ?></p>
             <p class="text-xs text-gray-400 mt-1"><?php echo DOCTOR_ADDRESS; ?></p>
